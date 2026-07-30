@@ -68,6 +68,68 @@
     box-shadow:0 4px 14px rgba(0,0,0,.25);text-decoration:none;
   }
   .wa-float:hover{background:#1ebe57}
+
+  .actions-row{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+  .add-cart-btn{
+    display:flex;align-items:center;justify-content:center;gap:8px;background:#fff;color:var(--navy);
+    border:1.5px solid var(--navy);padding:9px;font-size:13.5px;font-weight:700;cursor:pointer;border-radius:8px
+  }
+  .add-cart-btn:hover{background:#eef3f9}
+  .add-cart-btn.added{background:var(--green);color:#fff;border-color:var(--green)}
+  .order-btn{border-radius:8px}
+
+  .cart-float{
+    position:fixed;bottom:22px;left:22px;z-index:999;
+    background:var(--navy);color:#fff;width:60px;height:60px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-size:26px;border:none;cursor:pointer;
+    box-shadow:0 4px 14px rgba(0,0,0,.25);
+  }
+  .cart-float:hover{background:#123a72}
+  .cart-badge{
+    position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;border-radius:50%;
+    min-width:22px;height:22px;padding:0 4px;font-size:12px;font-weight:700;display:none;
+    align-items:center;justify-content:center;border:2px solid #fff;
+  }
+  .cart-badge.show{display:flex}
+
+  .cart-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:none;
+    align-items:center;justify-content:center;padding:16px;
+  }
+  .cart-overlay.show{display:flex}
+  .cart-panel{
+    background:#fff;border-radius:14px;width:100%;max-width:520px;max-height:85vh;
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  .cart-header{
+    background:var(--navy);color:#fff;padding:16px 20px;display:flex;align-items:center;justify-content:space-between
+  }
+  .cart-header h2{margin:0;font-size:17px}
+  .cart-close{background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1}
+  .cart-body{padding:12px 20px;overflow-y:auto;flex:1}
+  .cart-item{display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)}
+  .cart-item img{width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--border)}
+  .cart-item .ci-info{flex:1;min-width:0}
+  .cart-item .ci-name{font-size:14px;font-weight:600;margin:0 0 4px}
+  .cart-item .ci-code{font-size:11px;color:var(--muted);font-family:monospace}
+  .cart-item .ci-price{font-size:13px;color:var(--navy);font-weight:700;margin-top:4px}
+  .qty-box{display:flex;align-items:center;gap:8px}
+  .qty-box button{
+    width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:16px;
+    display:flex;align-items:center;justify-content:center
+  }
+  .qty-box span{min-width:20px;text-align:center;font-weight:700}
+  .ci-remove{background:none;border:none;color:var(--red);cursor:pointer;font-size:18px;padding:4px}
+  .cart-footer{padding:16px 20px;border-top:1px solid var(--border);background:#fafbfc}
+  .cart-total{display:flex;justify-content:space-between;font-size:15px;font-weight:700;margin-bottom:12px;color:var(--navy)}
+  .cart-actions{display:flex;gap:10px}
+  .cart-send{
+    flex:1;background:#25D366;color:#fff;border:none;padding:12px;border-radius:8px;font-size:14.5px;
+    font-weight:700;cursor:pointer;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:8px
+  }
+  .cart-send:hover{background:#1ebe57}
+  .cart-clear{background:#fff;color:var(--red);border:1px solid var(--red);padding:12px 16px;border-radius:8px;cursor:pointer;font-size:14px}
+  .cart-empty{text-align:center;color:var(--muted);padding:40px 10px}
 </style>
 </head>
 <body>
@@ -96,6 +158,22 @@
 <footer>© صيدلية السلطان — تواصل عبر واتساب: 0552933233</footer>
 
 <a class="wa-float" id="waFloat" href="https://wa.me/966552933233" target="_blank" rel="noopener" title="تواصل معنا عبر واتساب">💬</a>
+
+<button class="cart-float" id="cartFloat" title="سلة المشتريات">
+  🛒
+  <span class="cart-badge" id="cartBadge">0</span>
+</button>
+
+<div class="cart-overlay" id="cartOverlay">
+  <div class="cart-panel">
+    <div class="cart-header">
+      <h2>🛒 سلة المشتريات</h2>
+      <button class="cart-close" id="cartClose">×</button>
+    </div>
+    <div class="cart-body" id="cartBody"></div>
+    <div class="cart-footer" id="cartFooter"></div>
+  </div>
+</div>
 
 <script src="db.js"></script>
 <script>
@@ -205,9 +283,12 @@ function render() {
         ${p.price ? `<div class="price">${p.price} ريال</div>` : ""}
         <div class="code">كود المنتج: ${p.code}</div>
       </div>
-      <a class="order-btn" href="${waLink}" target="_blank" rel="noopener">
-        📱 اطلب على واتساب
-      </a>
+      <div class="actions-row">
+        <button class="add-cart-btn" data-code="${p.code}">➕ أضف للسلة</button>
+        <a class="order-btn" href="${waLink}" target="_blank" rel="noopener">
+          📱 اطلب مباشرة
+        </a>
+      </div>
     `;
     grid.appendChild(card);
   });
@@ -224,12 +305,145 @@ function escapeHtml(s) {
 
 document.getElementById("searchBox").addEventListener("input", render);
 
+/* ================= السلة (طلب أكثر من صنف برسالة واحدة) ================= */
+const CART_KEY = "sultan_cart";
+
+function loadCart() {
+  try { return JSON.parse(localStorage.getItem(CART_KEY)) || []; }
+  catch (e) { return []; }
+}
+function saveCart(cart) {
+  localStorage.setItem(CART_KEY, JSON.stringify(cart));
+  updateCartBadge();
+}
+function getCart() { return loadCart(); }
+
+function addToCart(code) {
+  const cart = loadCart();
+  const existing = cart.find(i => i.code === code);
+  if (existing) existing.qty += 1;
+  else cart.push({ code, qty: 1 });
+  saveCart(cart);
+}
+
+function changeQty(code, delta) {
+  const cart = loadCart();
+  const item = cart.find(i => i.code === code);
+  if (!item) return;
+  item.qty += delta;
+  const next = item.qty > 0 ? cart : cart.filter(i => i.code !== code);
+  saveCart(next);
+  renderCart();
+}
+
+function removeFromCart(code) {
+  const next = loadCart().filter(i => i.code !== code);
+  saveCart(next);
+  renderCart();
+}
+
+function updateCartBadge() {
+  const total = loadCart().reduce((sum, i) => sum + i.qty, 0);
+  const badge = document.getElementById("cartBadge");
+  badge.textContent = total;
+  badge.classList.toggle("show", total > 0);
+}
+
+function renderCart() {
+  const cart = loadCart();
+  const body = document.getElementById("cartBody");
+  const footer = document.getElementById("cartFooter");
+
+  if (cart.length === 0) {
+    body.innerHTML = `<div class="cart-empty">🛒 السلة فارغة حاليًا<br>أضف منتجات من المتجر لتظهر هنا</div>`;
+    footer.innerHTML = "";
+    return;
+  }
+
+  let total = 0;
+  let missingAny = false;
+  body.innerHTML = cart.map(item => {
+    const p = ALL_PRODUCTS.find(pr => pr.code === item.code);
+    if (!p) { missingAny = true; return ""; }
+    const lineTotal = (p.price || 0) * item.qty;
+    total += lineTotal;
+    return `
+      <div class="cart-item">
+        <img src="${p.image}" alt="${escapeHtml(p.name)}">
+        <div class="ci-info">
+          <p class="ci-name">${escapeHtml(p.name)}</p>
+          <div class="ci-code">الكود: ${p.code}</div>
+          ${p.price ? `<div class="ci-price">${p.price} ريال × ${item.qty} = ${lineTotal.toFixed(2)} ريال</div>` : ""}
+        </div>
+        <div class="qty-box">
+          <button onclick="changeQty('${p.code}', 1)">+</button>
+          <span>${item.qty}</span>
+          <button onclick="changeQty('${p.code}', -1)">−</button>
+        </div>
+        <button class="ci-remove" onclick="removeFromCart('${p.code}')" title="حذف">🗑️</button>
+      </div>
+    `;
+  }).join("");
+
+  const waLink = buildCartWhatsAppLink(cart);
+  footer.innerHTML = `
+    <div class="cart-total">
+      <span>الإجمالي التقديري</span>
+      <span>${total.toFixed(2)} ريال</span>
+    </div>
+    ${missingAny ? `<div style="font-size:12px;color:var(--red);margin-bottom:8px">⚠️ بعض المنتجات لم تعد متوفرة وتم تجاهلها من الإجمالي</div>` : ""}
+    <div class="cart-actions">
+      <button class="cart-clear" id="cartClearBtn">🗑️ إفراغ السلة</button>
+      <a class="cart-send" href="${waLink}" target="_blank" rel="noopener">📤 إرسال الطلب عبر واتساب</a>
+    </div>
+  `;
+  document.getElementById("cartClearBtn").addEventListener("click", () => {
+    if (confirm("هل تريد إفراغ السلة بالكامل؟")) { saveCart([]); renderCart(); }
+  });
+}
+
+function buildCartWhatsAppLink(cart) {
+  const lines = ["مرحباً، أرغب بطلب المنتجات التالية:", ""];
+  let total = 0;
+  cart.forEach((item, idx) => {
+    const p = ALL_PRODUCTS.find(pr => pr.code === item.code);
+    if (!p) return;
+    const lineTotal = (p.price || 0) * item.qty;
+    total += lineTotal;
+    lines.push(`${idx + 1}) ${p.name} — الكود: ${p.code} — الكمية: ${item.qty}${p.price ? ` — ${lineTotal.toFixed(2)} ريال` : ""}`);
+  });
+  if (total > 0) lines.push("", `الإجمالي التقديري: ${total.toFixed(2)} ريال`);
+  lines.push("", `رابط المتجر: ${location.origin}${location.pathname}`);
+  return `https://wa.me/966552933233?text=${encodeURIComponent(lines.join("\n"))}`;
+}
+
+function openCart() { renderCart(); document.getElementById("cartOverlay").classList.add("show"); }
+function closeCart() { document.getElementById("cartOverlay").classList.remove("show"); }
+
+document.getElementById("cartFloat").addEventListener("click", openCart);
+document.getElementById("cartClose").addEventListener("click", closeCart);
+document.getElementById("cartOverlay").addEventListener("click", (e) => {
+  if (e.target.id === "cartOverlay") closeCart();
+});
+
+// تفويض النقر لزر "أضف للسلة" على كل بطاقة منتج
+document.getElementById("grid").addEventListener("click", (e) => {
+  const btn = e.target.closest(".add-cart-btn");
+  if (!btn) return;
+  addToCart(btn.dataset.code);
+  const original = btn.textContent;
+  btn.textContent = "✅ أُضيف للسلة";
+  btn.classList.add("added");
+  setTimeout(() => { btn.textContent = original; btn.classList.remove("added"); }, 1200);
+});
+
 (async function init() {
   buildCategoryButtons();
   ALL_PRODUCTS = await loadProducts();
   ALL_PRODUCTS.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   render();
   checkNewProducts(ALL_PRODUCTS);
+  updateCartBadge();
 })();
 </script>
 </body>
