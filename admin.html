@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>لوحة التحكم — صيدلية السلطان</title>
+<style>
+  :root{
+    --navy:#0b2c58; --blue:#1c6fb0; --green:#1a8f4c; --red:#d3222a;
+    --bg:#f2f5f8; --card:#ffffff; --border:#e1e6ec; --text:#1c2733; --muted:#6b7686;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI",Tahoma,Arial,sans-serif;background:var(--bg);color:var(--text)}
+  header{background:var(--navy);color:#fff;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  header h1{font-size:20px;margin:0}
+  header a{color:#bcd7f2;text-decoration:none;font-size:14px}
+  .wrap{max-width:1100px;margin:0 auto;padding:20px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  .card h2{margin-top:0;font-size:17px;color:var(--navy)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:700px){.grid2{grid-template-columns:1fr}}
+  label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-weight:600}
+  input[type=text],input[type=number],select,textarea{
+    width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;background:#fff
+  }
+  textarea{resize:vertical;min-height:70px}
+  .field{margin-bottom:14px}
+  .btn{display:inline-flex;align-items:center;gap:6px;background:var(--blue);color:#fff;border:none;padding:10px 18px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600}
+  .btn:hover{opacity:.9}
+  .btn.green{background:var(--green)}
+  .btn.red{background:var(--red)}
+  .btn.outline{background:#fff;color:var(--blue);border:1px solid var(--blue)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .drop{border:2px dashed var(--border);border-radius:10px;padding:16px;text-align:center;cursor:pointer;background:#fafbfc}
+  .drop:hover{border-color:var(--blue)}
+  #preview{max-width:100%;max-height:260px;margin-top:10px;border-radius:8px;display:none;border:1px solid var(--border)}
+  .counter{font-size:13px;color:var(--muted)}
+  .counter b{color:var(--navy)}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:8px 6px;border-bottom:1px solid var(--border);text-align:right;vertical-align:middle}
+  th{color:var(--muted);font-weight:600;background:#f8f9fb}
+  td img{width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px solid var(--border)}
+  .tag{display:inline-block;background:#eaf2fb;color:var(--blue);padding:2px 8px;border-radius:12px;font-size:12px}
+  .code{font-family:monospace;font-weight:700;color:var(--navy)}
+  .row-actions button{border:none;background:none;cursor:pointer;font-size:13px;padding:4px 6px}
+  .row-actions .del{color:var(--red)}
+  .row-actions .edit{color:var(--blue)}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  .toolbar input[type=text]{max-width:220px}
+  .msg{padding:10px 14px;border-radius:8px;font-size:14px;margin-bottom:14px;display:none}
+  .msg.ok{background:#e7f7ec;color:var(--green);display:block}
+  .msg.err{background:#fdecec;color:var(--red);display:block}
+  .code-result{background:#eaf7ee;border:1px solid #bfe6cc;border-radius:8px;padding:12px 16px;margin-top:12px;display:none}
+  .code-result b{font-size:18px;color:var(--green);font-family:monospace}
+  #lockScreen{position:fixed;inset:0;background:var(--navy);display:flex;align-items:center;justify-content:center;z-index:999}
+  .lock-box{background:#fff;padding:30px;border-radius:14px;width:320px;max-width:90%;text-align:center}
+  .lock-box h2{color:var(--navy);margin-top:0}
+  .lock-box input{margin-bottom:12px}
+  .lock-box .err{color:var(--red);font-size:13px;min-height:18px;margin-bottom:6px}
+  .hint{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.6}
+  .instructions{background:#fff9e6;border:1px solid #f0dfa0;border-radius:10px;padding:14px 18px;font-size:13.5px;line-height:2;color:#5a4a10}
+  .instructions ol{margin:6px 0 0;padding-inline-start:20px}
+  footer{text-align:center;color:var(--muted);font-size:12px;padding:20px}
+</style>
+</head>
+<body>
+
+<div id="lockScreen">
+  <div class="lock-box">
+    <h2>🔒 دخول لوحة التحكم</h2>
+    <div id="lockMode"></div>
+    <div class="err" id="lockErr"></div>
+    <input type="text" id="lockInput" placeholder="كلمة المرور" style="text-align:center;letter-spacing:2px" autocomplete="off">
+    <button class="btn" style="width:100%" id="lockBtn">دخول</button>
+    <div class="hint">كلمة المرور تُحفظ في هذا المتصفح فقط. لا تشاركها مع أي شخص.</div>
+  </div>
+</div>
+
+<header>
+  <h1>🛠️ لوحة تحكم — صيدلية السلطان</h1>
+  <a href="index.html" target="_blank">↗ فتح صفحة المتجر</a>
+</header>
+
+<div class="wrap">
+
+  <div class="card instructions">
+    <b>طريقة الاستخدام مع الاستضافة المجانية:</b>
+    <ol>
+      <li>أضف منتجاتك من النموذج بالأسفل (تُحفظ مؤقتًا في هذا المتصفح).</li>
+      <li>عند الانتهاء، اضغط زر <b>"تصدير products.json"</b> لتنزيل ملف البيانات.</li>
+      <li>ارفع ملف <span class="code">products.json</span> مع <span class="code">index.html</span> و<span class="code">admin.html</span> و<span class="code">db.js</span> إلى استضافتك.</li>
+      <li>في كل مرة تضيف/تعدّل منتجات، كرر التصدير وأعد رفع الملف ليحل محل القديم.</li>
+      <li>قبل التعديل على متجر قائم، استخدم <b>"استيراد products.json"</b> لجلب المنتجات الحالية إلى لوحة التحكم أولًا.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>➕ إضافة منتج جديد</h2>
+    <div class="msg" id="formMsg"></div>
+    <form id="productForm">
+      <div class="grid2">
+        <div>
+          <div class="field">
+            <label>صورة المنتج (تحتوي كل بيانات المنتج كالنموذج) *</label>
+            <div class="drop" id="dropZone">📷 اضغط هنا لاختيار صورة المنتج</div>
+            <input type="file" id="imageInput" accept="image/*" style="display:none">
+            <img id="preview">
+          </div>
+          <div class="field">
+            <label>الفئة *</label>
+            <select id="categorySelect"></select>
+          </div>
+        </div>
+        <div>
+          <div class="field">
+            <label>اسم المنتج * (يُستخدم للعرض والبحث)</label>
+            <input type="text" id="nameInput" placeholder="مثال: جهاز التبخيرة iCare CNB 69010">
+          </div>
+          <div class="field">
+            <label>السعر (اختياري)</label>
+            <input type="number" id="priceInput" placeholder="مثال: 109.99" step="0.01" min="0">
+          </div>
+          <div class="field">
+            <label>وصف مختصر (اختياري)</label>
+            <textarea id="descInput" placeholder="ملاحظات إضافية تظهر تحت اسم المنتج..."></textarea>
+          </div>
+        </div>
+      </div>
+      <button type="submit" class="btn green" id="saveBtn">💾 حفظ المنتج وتوليد الكود</button>
+      <span class="counter">— المنتجات الحالية: <b id="countNow">0</b> / <span id="countMax">500</span></span>
+      <div class="code-result" id="codeResult">
+        تم الحفظ بنجاح ✅ الكود الفريد للمنتج: <b id="codeValue"></b>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>📦 المنتجات المضافة</h2>
+    <div class="toolbar">
+      <input type="text" id="searchBox" placeholder="بحث بالاسم أو الكود...">
+      <select id="filterCat"><option value="">كل الفئات</option></select>
+      <button class="btn outline" id="exportBtn">⬇️ تصدير products.json</button>
+      <label class="btn outline" style="cursor:pointer">
+        ⬆️ استيراد products.json
+        <input type="file" id="importInput" accept="application/json" style="display:none">
+      </label>
+      <button class="btn red" id="clearBtn" style="margin-inline-start:auto">🗑️ حذف الكل</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr><th>صورة</th><th>الكود</th><th>الاسم</th><th>الفئة</th><th>السعر</th><th></th></tr>
+        </thead>
+        <tbody id="productsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+<footer>لوحة تحكم صيدلية السلطان — بيانات محفوظة محليًا في متصفحك حتى يتم التصدير</footer>
+
+<script src="db.js"></script>
+<script>
+/* ---------------- حماية بكلمة مرور بسيطة ---------------- */
+const PASS_KEY = "sultan_admin_pass_hash";
+const SESSION_KEY = "sultan_admin_unlocked";
+
+async function initLock() {
+  const savedHash = localStorage.getItem(PASS_KEY);
+  const lockMode = document.getElementById("lockMode");
+  const lockInput = document.getElementById("lockInput");
+  const lockErr = document.getElementById("lockErr");
+  const lockBtn = document.getElementById("lockBtn");
+  const lockScreen = document.getElementById("lockScreen");
+
+  if (sessionStorage.getItem(SESSION_KEY) === "1") {
+    lockScreen.style.display = "none";
+    return;
+  }
+
+  if (!savedHash) {
+    lockMode.innerHTML = "<p style='font-size:13px;color:#6b7686'>أول استخدام — الرجاء إنشاء كلمة مرور للوحة التحكم</p>";
+    lockBtn.textContent = "إنشاء وحفظ";
+  } else {
+    lockMode.innerHTML = "<p style='font-size:13px;color:#6b7686'>أدخل كلمة المرور للمتابعة</p>";
+    lockBtn.textContent = "دخول";
+  }
+
+  async function attempt() {
+    const val = lockInput.value.trim();
+    if (!val) { lockErr.textContent = "الرجاء إدخال كلمة مرور"; return; }
+    const hash = await sha256(val);
+    const current = localStorage.getItem(PASS_KEY);
+    if (!current) {
+      if (val.length < 4) { lockErr.textContent = "كلمة المرور قصيرة جدًا (4 أحرف على الأقل)"; return; }
+      localStorage.setItem(PASS_KEY, hash);
+      sessionStorage.setItem(SESSION_KEY, "1");
+      lockScreen.style.display = "none";
+    } else if (hash === current) {
+      sessionStorage.setItem(SESSION_KEY, "1");
+      lockScreen.style.display = "none";
+    } else {
+      lockErr.textContent = "كلمة المرور غير صحيحة";
+    }
+  }
+  lockBtn.addEventListener("click", attempt);
+  lockInput.addEventListener("keydown", (e) => { if (e.key === "Enter") attempt(); });
+}
+initLock();
+
+/* ---------------- تهيئة الفئات ---------------- */
+const categorySelect = document.getElementById("categorySelect");
+const filterCat = document.getElementById("filterCat");
+CATEGORIES.forEach(c => {
+  const o1 = document.createElement("option"); o1.value = c.key; o1.textContent = c.label;
+  categorySelect.appendChild(o1);
+  const o2 = document.createElement("option"); o2.value = c.key; o2.textContent = c.label;
+  filterCat.appendChild(o2);
+});
+document.getElementById("countMax").textContent = MAX_PRODUCTS;
+
+/* ---------------- رفع ومعاينة الصورة ---------------- */
+let currentImage = null; // {dataUrl,width,height}
+const dropZone = document.getElementById("dropZone");
+const imageInput = document.getElementById("imageInput");
+const preview = document.getElementById("preview");
+
+dropZone.addEventListener("click", () => imageInput.click());
+imageInput.addEventListener("change", async () => {
+  const file = imageInput.files[0];
+  if (!file) return;
+  dropZone.textContent = "⏳ جارٍ تجهيز الصورة...";
+  try {
+    currentImage = await resizeImageFile(file, 1000, 0.82);
+    preview.src = currentImage.dataUrl;
+    preview.style.display = "block";
+    dropZone.textContent = "✅ تم اختيار الصورة — اضغط لتغييرها";
+  } catch (err) {
+    showMsg("formMsg", "تعذر تحميل الصورة: " + err.message, "err");
+    dropZone.textContent = "📷 اضغط هنا لاختيار صورة المنتج";
+  }
+});
+
+function showMsg(id, text, type) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = "msg " + type;
+  setTimeout(() => { el.style.display = "none"; }, 4500);
+}
+
+/* ---------------- حفظ منتج جديد ---------------- */
+document.getElementById("productForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const name = document.getElementById("nameInput").value.trim();
+  const category = categorySelect.value;
+  const price = document.getElementById("priceInput").value;
+  const desc = document.getElementById("descInput").value.trim();
+
+  if (!currentImage) { showMsg("formMsg", "الرجاء اختيار صورة للمنتج", "err"); return; }
+  if (!name) { showMsg("formMsg", "الرجاء إدخال اسم المنتج", "err"); return; }
+
+  const all = await dbGetAll();
+  if (all.length >= MAX_PRODUCTS) {
+    showMsg("formMsg", `وصلت للحد الأقصى (${MAX_PRODUCTS} منتج)`, "err");
+    return;
+  }
+
+  const code = generateCode(all.map(p => p.code));
+  const product = {
+    code, name, category,
+    price: price ? parseFloat(price) : null,
+    description: desc || "",
+    image: currentImage.dataUrl,
+    imgW: currentImage.width,
+    imgH: currentImage.height,
+    createdAt: Date.now()
+  };
+  await dbPut(product);
+
+  document.getElementById("codeValue").textContent = code;
+  document.getElementById("codeResult").style.display = "block";
+  showMsg("formMsg", "تم حفظ المنتج بنجاح ✅", "ok");
+
+  // reset form
+  document.getElementById("productForm").reset();
+  categorySelect.selectedIndex = 0;
+  currentImage = null;
+  preview.style.display = "none";
+  dropZone.textContent = "📷 اضغط هنا لاختيار صورة المنتج";
+
+  refreshList();
+});
+
+/* ---------------- عرض/بحث/حذف المنتجات ---------------- */
+async function refreshList() {
+  const all = await dbGetAll();
+  all.sort((a, b) => b.createdAt - a.createdAt);
+  document.getElementById("countNow").textContent = all.length;
+
+  const q = document.getElementById("searchBox").value.trim().toLowerCase();
+  const cat = filterCat.value;
+
+  const filtered = all.filter(p => {
+    const matchQ = !q || p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q);
+    const matchCat = !cat || p.category === cat;
+    return matchQ && matchCat;
+  });
+
+  const tbody = document.getElementById("productsBody");
+  tbody.innerHTML = "";
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#6b7686;padding:20px">لا توجد منتجات</td></tr>`;
+    return;
+  }
+  filtered.forEach(p => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><img src="${p.image}" alt=""></td>
+      <td class="code">${p.code}</td>
+      <td>${escapeHtml(p.name)}</td>
+      <td><span class="tag">${categoryLabel(p.category)}</span></td>
+      <td>${p.price ? p.price + " ريال" : "—"}</td>
+      <td class="row-actions"><button class="del" data-code="${p.code}">🗑️ حذف</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  tbody.querySelectorAll(".del").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      if (confirm("هل تريد حذف هذا المنتج؟")) {
+        await dbDelete(btn.dataset.code);
+        refreshList();
+      }
+    });
+  });
+}
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
+}
+document.getElementById("searchBox").addEventListener("input", refreshList);
+filterCat.addEventListener("change", refreshList);
+
+/* ---------------- تصدير / استيراد ---------------- */
+document.getElementById("exportBtn").addEventListener("click", async () => {
+  const all = await dbGetAll();
+  const blob = new Blob([JSON.stringify({ exportedAt: Date.now(), products: all }, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "products.json";
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById("importInput").addEventListener("change", async () => {
+  const file = document.getElementById("importInput").files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const json = JSON.parse(text);
+    const products = Array.isArray(json) ? json : (json.products || []);
+    if (!confirm(`سيتم استبدال المنتجات الحالية بـ ${products.length} منتج من الملف. متابعة؟`)) return;
+    await dbBulkReplace(products);
+    showMsg("formMsg", "تم الاستيراد بنجاح ✅", "ok");
+    refreshList();
+  } catch (err) {
+    showMsg("formMsg", "ملف غير صالح: " + err.message, "err");
+  }
+});
+
+document.getElementById("clearBtn").addEventListener("click", async () => {
+  if (confirm("هل أنت متأكد من حذف جميع المنتجات؟ لا يمكن التراجع.")) {
+    await dbClearAll();
+    refreshList();
+  }
+});
+
+refreshList();
+</script>
+</body>
+</html>

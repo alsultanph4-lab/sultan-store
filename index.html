@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>صيدلية السلطان — المتجر الإلكتروني</title>
+<meta name="description" content="صيدلية السلطان — تسوق منتجات العناية بالبشرة والشعر والجمال والعناية الشخصية ومنتجات الطفل والأدوية والمكملات الغذائية">
+<style>
+  :root{
+    --navy:#0b2c58; --blue:#1c6fb0; --green:#1a8f4c; --red:#d3222a;
+    --bg:#f2f5f8; --card:#ffffff; --border:#e1e6ec; --text:#1c2733; --muted:#6b7686;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI",Tahoma,Arial,sans-serif;background:var(--bg);color:var(--text)}
+  header{background:linear-gradient(90deg,var(--navy),var(--blue));color:#fff;padding:22px 24px;text-align:center}
+  header h1{margin:0;font-size:26px}
+  header p{margin:6px 0 0;font-size:14px;opacity:.9}
+  .toolbar{
+    position:sticky;top:0;background:#fff;border-bottom:1px solid var(--border);
+    padding:14px 20px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:center;z-index:10
+  }
+  .toolbar input[type=text]{
+    flex:1;min-width:200px;max-width:320px;padding:10px 14px;border:1px solid var(--border);border-radius:20px;font-size:14px
+  }
+  .cats{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  .cat-btn{
+    border:1px solid var(--border);background:#fff;color:var(--text);padding:8px 14px;border-radius:20px;
+    cursor:pointer;font-size:13px;white-space:nowrap
+  }
+  .cat-btn.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .wrap{max-width:1200px;margin:0 auto;padding:24px 16px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:18px}
+  .card{
+    background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;
+    display:flex;flex-direction:column;box-shadow:0 1px 3px rgba(0,0,0,.05);transition:.15s;
+  }
+  .card:hover{box-shadow:0 6px 16px rgba(0,0,0,.08);transform:translateY(-2px)}
+  .card.highlight{outline:3px solid var(--green)}
+  .imgbox{background:#fafbfc;display:flex;align-items:center;justify-content:center;padding:10px}
+  .imgbox img{max-width:100%;height:auto;display:block;border-radius:6px}
+  .info{padding:12px 14px;display:flex;flex-direction:column;gap:6px;flex:1}
+  .info .tag{align-self:flex-start;background:#eaf2fb;color:var(--blue);padding:2px 10px;border-radius:12px;font-size:11px}
+  .info h3{margin:2px 0;font-size:15px;line-height:1.4}
+  .info .desc{font-size:12.5px;color:var(--muted);line-height:1.5;flex:1}
+  .info .price{font-size:16px;font-weight:700;color:var(--navy)}
+  .info .code{font-size:11px;color:var(--muted);font-family:monospace}
+  .order-btn{
+    display:flex;align-items:center;justify-content:center;gap:8px;background:#25D366;color:#fff;
+    border:none;padding:11px;font-size:14px;font-weight:700;cursor:pointer;text-decoration:none;margin-top:6px;border-radius:0 0 12px 12px
+  }
+  .order-btn:hover{background:#1ebe57}
+  .empty{text-align:center;color:var(--muted);padding:60px 20px;font-size:15px}
+  footer{text-align:center;color:var(--muted);font-size:12px;padding:24px}
+  .count-info{text-align:center;color:var(--muted);font-size:13px;margin-bottom:14px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>💊 صيدلية السلطان</h1>
+  <p>نحن نهتم بصحتك — منتجات أصلية ومعتمدة</p>
+</header>
+
+<div class="toolbar">
+  <input type="text" id="searchBox" placeholder="🔍 ابحث بالاسم أو كود المنتج...">
+</div>
+<div class="toolbar" style="border-top:none;padding-top:0">
+  <div class="cats" id="catButtons"></div>
+</div>
+
+<div class="wrap">
+  <div class="count-info" id="countInfo"></div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<footer>© صيدلية السلطان — تواصل عبر واتساب: 0552933233</footer>
+
+<script src="db.js"></script>
+<script>
+let ALL_PRODUCTS = [];
+let ACTIVE_CAT = "";
+
+async function loadProducts() {
+  // 1) نحاول أولًا تحميل ملف products.json (يعمل على أي استضافة ساكنة)
+  try {
+    const res = await fetch("products.json?t=" + Date.now(), { cache: "no-store" });
+    if (res.ok) {
+      const json = await res.json();
+      const products = Array.isArray(json) ? json : (json.products || []);
+      if (products.length) return products;
+    }
+  } catch (e) { /* تجاهل، ننتقل للبديل */ }
+
+  // 2) البديل: القراءة من IndexedDB (مفيد أثناء المعاينة المحلية قبل النشر)
+  try {
+    const local = await dbGetAll();
+    return local;
+  } catch (e) {
+    return [];
+  }
+}
+
+function buildCategoryButtons() {
+  const wrap = document.getElementById("catButtons");
+  const allBtn = document.createElement("button");
+  allBtn.className = "cat-btn active";
+  allBtn.textContent = "الكل";
+  allBtn.addEventListener("click", () => setCategory("", allBtn));
+  wrap.appendChild(allBtn);
+
+  CATEGORIES.forEach(c => {
+    const btn = document.createElement("button");
+    btn.className = "cat-btn";
+    btn.textContent = c.label;
+    btn.addEventListener("click", () => setCategory(c.key, btn));
+    wrap.appendChild(btn);
+  });
+}
+
+function setCategory(key, btnEl) {
+  ACTIVE_CAT = key;
+  document.querySelectorAll(".cat-btn").forEach(b => b.classList.remove("active"));
+  btnEl.classList.add("active");
+  render();
+}
+
+function render() {
+  const q = document.getElementById("searchBox").value.trim().toLowerCase();
+  const params = new URLSearchParams(location.search);
+  const highlightCode = params.get("code");
+
+  const filtered = ALL_PRODUCTS.filter(p => {
+    const matchCat = !ACTIVE_CAT || p.category === ACTIVE_CAT;
+    const matchQ = !q || (p.name || "").toLowerCase().includes(q) || (p.code || "").toLowerCase().includes(q);
+    return matchCat && matchQ;
+  });
+
+  document.getElementById("countInfo").textContent = `عدد المنتجات المعروضة: ${filtered.length}`;
+
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1">لا توجد منتجات مطابقة حاليًا 🙁</div>`;
+    return;
+  }
+
+  filtered.forEach(p => {
+    const productUrl = `${location.origin}${location.pathname}?code=${encodeURIComponent(p.code)}`;
+    const waLink = whatsappOrderLink(p, productUrl);
+
+    const card = document.createElement("div");
+    card.className = "card" + (highlightCode && highlightCode === p.code ? " highlight" : "");
+    card.id = "prod-" + p.code;
+    card.innerHTML = `
+      <div class="imgbox"><img src="${p.image}" alt="${escapeHtml(p.name)}" loading="lazy"></div>
+      <div class="info">
+        <span class="tag">${categoryLabel(p.category)}</span>
+        <h3>${escapeHtml(p.name)}</h3>
+        ${p.description ? `<div class="desc">${escapeHtml(p.description)}</div>` : ""}
+        ${p.price ? `<div class="price">${p.price} ريال</div>` : ""}
+        <div class="code">كود المنتج: ${p.code}</div>
+      </div>
+      <a class="order-btn" href="${waLink}" target="_blank" rel="noopener">
+        📱 اطلب على واتساب
+      </a>
+    `;
+    grid.appendChild(card);
+  });
+
+  if (highlightCode) {
+    const el = document.getElementById("prod-" + highlightCode);
+    if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "center" }), 200);
+  }
+}
+
+function escapeHtml(s) {
+  return (s || "").replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
+}
+
+document.getElementById("searchBox").addEventListener("input", render);
+
+(async function init() {
+  buildCategoryButtons();
+  ALL_PRODUCTS = await loadProducts();
+  ALL_PRODUCTS.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  render();
+})();
+</script>
+</body>
+</html>
