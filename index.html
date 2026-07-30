@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>صيدلية السلطان — المتجر الإلكتروني</title>
 <meta name="description" content="صيدلية السلطان — تسوق منتجات العناية بالبشرة والشعر والجمال والعناية الشخصية ومنتجات الطفل والأدوية والمكملات الغذائية">
+<link rel="icon" type="image/png" href="logo.png">
 <style>
   :root{
     --navy:#0b2c58; --blue:#1c6fb0; --green:#1a8f4c; --red:#d3222a;
@@ -52,14 +53,33 @@
   .empty{text-align:center;color:var(--muted);padding:60px 20px;font-size:15px}
   footer{text-align:center;color:var(--muted);font-size:12px;padding:24px}
   .count-info{text-align:center;color:var(--muted);font-size:13px;margin-bottom:14px}
+  header .brand{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap}
+  header .brand img{width:56px;height:56px;border-radius:50%;background:#fff;object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+  header h1{margin:0;font-size:26px}
+  .new-banner{
+    display:none;background:#fff3cd;color:#7a5b00;border-bottom:1px solid #f0dfa0;
+    text-align:center;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer
+  }
+  .new-banner.show{display:block}
+  .wa-float{
+    position:fixed;bottom:22px;right:22px;z-index:999;
+    background:#25D366;color:#fff;width:60px;height:60px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-size:30px;
+    box-shadow:0 4px 14px rgba(0,0,0,.25);text-decoration:none;
+  }
+  .wa-float:hover{background:#1ebe57}
 </style>
 </head>
 <body>
 
 <header>
-  <h1>💊 صيدلية السلطان</h1>
+  <div class="brand">
+    <img src="logo.png" alt="شعار صيدلية السلطان">
+    <h1>صيدلية السلطان</h1>
+  </div>
   <p>نحن نهتم بصحتك — منتجات أصلية ومعتمدة</p>
 </header>
+<div class="new-banner" id="newBanner">🆕 تمت إضافة منتجات جديدة منذ آخر زيارة لك — اضغط هنا لعرضها</div>
 
 <div class="toolbar">
   <input type="text" id="searchBox" placeholder="🔍 ابحث بالاسم أو كود المنتج...">
@@ -75,10 +95,34 @@
 
 <footer>© صيدلية السلطان — تواصل عبر واتساب: 0552933233</footer>
 
+<a class="wa-float" id="waFloat" href="https://wa.me/966552933233" target="_blank" rel="noopener" title="تواصل معنا عبر واتساب">💬</a>
+
 <script src="db.js"></script>
 <script>
 let ALL_PRODUCTS = [];
 let ACTIVE_CAT = "";
+
+/* ---------------- عداد الزيارات (بدون حساب - CounterAPI مجاني) ---------------- */
+const VISIT_NAMESPACE = "alsultanph4-lab-sultan-store";
+fetch(`https://api.counterapi.dev/v1/${VISIT_NAMESPACE}/visits/up`).catch(() => {});
+
+/* ---------------- تنبيه المنتجات الجديدة منذ آخر زيارة ---------------- */
+function checkNewProducts(products) {
+  if (!products.length) return;
+  const latest = Math.max(...products.map(p => p.createdAt || 0));
+  const lastSeen = parseInt(localStorage.getItem("sultan_last_seen") || "0", 10);
+  const banner = document.getElementById("newBanner");
+  if (latest > lastSeen) {
+    banner.classList.add("show");
+    banner.addEventListener("click", () => {
+      localStorage.setItem("sultan_last_seen", String(latest));
+      banner.classList.remove("show");
+      document.getElementById("grid").scrollIntoView({ behavior: "smooth" });
+    });
+  } else {
+    localStorage.setItem("sultan_last_seen", String(latest));
+  }
+}
 
 async function loadProducts() {
   // 1) نحاول أولًا تحميل ملف products.json (يعمل على أي استضافة ساكنة)
@@ -185,6 +229,7 @@ document.getElementById("searchBox").addEventListener("input", render);
   ALL_PRODUCTS = await loadProducts();
   ALL_PRODUCTS.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   render();
+  checkNewProducts(ALL_PRODUCTS);
 })();
 </script>
 </body>
