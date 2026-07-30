@@ -111,10 +111,10 @@
     <b>طريقة الاستخدام مع الاستضافة المجانية:</b>
     <ol>
       <li>أضف منتجاتك من النموذج بالأسفل (تُحفظ مؤقتًا في هذا المتصفح).</li>
-      <li>عند الانتهاء، اضغط زر <b>"تصدير products.json"</b> لتنزيل ملف البيانات.</li>
-      <li>ارفع ملف <span class="code">products.json</span> مع <span class="code">index.html</span> و<span class="code">admin.html</span> و<span class="code">db.js</span> إلى استضافتك.</li>
-      <li>في كل مرة تضيف/تعدّل منتجات، كرر التصدير وأعد رفع الملف ليحل محل القديم.</li>
-      <li>قبل التعديل على متجر قائم، استخدم <b>"استيراد products.json"</b> لجلب المنتجات الحالية إلى لوحة التحكم أولًا.</li>
+      <li>عند الانتهاء، اضغط زر <b>"تصدير (ملف مضغوط)"</b> لتنزيل ملف <span class="code">sultan-store-export.zip</span> — يحتوي ملف البيانات وكل الصور منفصلة (لسرعة أعلى بكثير).</li>
+      <li>فُك ضغط الملف على جهازك، ثم ارفع <b>كل ما بداخله</b> (products.json وكل ملفات الصور) مع <span class="code">index.html</span> و<span class="code">admin.html</span> و<span class="code">db.js</span> و<span class="code">logo.png</span> إلى استضافتك.</li>
+      <li>في كل مرة تضيف/تعدّل منتجات، كرر التصدير وأعد رفع الملفات لتحل محل القديمة.</li>
+      <li>قبل التعديل على متجر قائم، استخدم <b>"استيراد"</b> واختر ملف الـ zip الذي صدّرته آخر مرة لجلب المنتجات الحالية إلى لوحة التحكم أولًا.</li>
     </ol>
   </div>
 
@@ -163,10 +163,10 @@
     <div class="toolbar">
       <input type="text" id="searchBox" placeholder="بحث بالاسم أو الكود...">
       <select id="filterCat"><option value="">كل الفئات</option></select>
-      <button class="btn outline" id="exportBtn">⬇️ تصدير products.json</button>
+      <button class="btn outline" id="exportBtn">⬇️ تصدير (ملف مضغوط)</button>
       <label class="btn outline" style="cursor:pointer">
-        ⬆️ استيراد products.json
-        <input type="file" id="importInput" accept="application/json" style="display:none">
+        ⬆️ استيراد
+        <input type="file" id="importInput" accept=".zip,application/json,.json" style="display:none">
       </label>
       <button class="btn red" id="clearBtn" style="margin-inline-start:auto">🗑️ حذف الكل</button>
     </div>
@@ -184,6 +184,7 @@
 <footer>لوحة تحكم صيدلية السلطان — بيانات محفوظة محليًا في متصفحك حتى يتم التصدير</footer>
 
 <script src="db.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
 /* ---------------- حماية بكلمة مرور بسيطة ---------------- */
 const PASS_KEY = "sultan_admin_pass_hash";
@@ -380,24 +381,75 @@ function escapeHtml(s) {
 document.getElementById("searchBox").addEventListener("input", refreshList);
 filterCat.addEventListener("change", refreshList);
 
-/* ---------------- تصدير / استيراد ---------------- */
+/* ---------------- تصدير / استيراد (ملف مضغوط: بيانات خفيفة + صور منفصلة) ---------------- */
 document.getElementById("exportBtn").addEventListener("click", async () => {
   const all = await dbGetAll();
-  const blob = new Blob([JSON.stringify({ exportedAt: Date.now(), products: all }, null, 2)], { type: "application/json" });
+  if (!all.length) { showMsg("formMsg", "لا توجد منتجات لتصديرها", "err"); return; }
+  showMsg("formMsg", "⏳ جارٍ تجهيز ملف التصدير...", "ok");
+
+  const zip = new JSZip();
+  const usedNames = new Set();
+  const metaProducts = all.map(p => {
+    let filename = p.code + ".jpg";
+    if (p.image && p.image.startsWith("data:image/png")) filename = p.code + ".png";
+    // تفادي تكرار اسم الملف في حال وجود أكواد متشابهة
+    let finalName = filename, n = 1;
+    while (usedNames.has(finalName)) { finalName = p.code + "-" + (n++) + ".jpg"; }
+    usedNames.add(finalName);
+
+    if (p.image && p.image.startsWith("data:")) {
+      const base64Data = p.image.split(",")[1];
+      zip.file(finalName, base64Data, { base64: true });
+    }
+    const { image, ...rest } = p;
+    return { ...rest, image: finalName };
+  });
+
+  zip.file("products.json", JSON.stringify({ exportedAt: Date.now(), products: metaProducts }, null, 2));
+  const blob = await zip.generateAsync({ type: "blob" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url; a.download = "products.json";
+  a.href = url; a.download = "sultan-store-export.zip";
   a.click();
   URL.revokeObjectURL(url);
+  showMsg("formMsg", "تم تجهيز ملف التصدير ✅ (products.json + الصور داخل ملف مضغوط واحد)", "ok");
 });
 
 document.getElementById("importInput").addEventListener("change", async () => {
   const file = document.getElementById("importInput").files[0];
   if (!file) return;
   try {
-    const text = await file.text();
-    const json = JSON.parse(text);
-    const products = Array.isArray(json) ? json : (json.products || []);
+    let products;
+    if (file.name.toLowerCase().endsWith(".zip")) {
+      const zip = await JSZip.loadAsync(file);
+      const metaFile = zip.file("products.json");
+      if (!metaFile) throw new Error("لم يتم العثور على products.json داخل الملف المضغوط");
+      const meta = JSON.parse(await metaFile.async("string"));
+      const rawProducts = meta.products || meta;
+      products = [];
+      for (const p of rawProducts) {
+        let imageDataUrl = null;
+        if (p.image) {
+          if (p.image.startsWith("data:")) {
+            imageDataUrl = p.image; // صيغة قديمة (صورة مضمّنة داخل JSON مباشرة)
+          } else {
+            const imgEntry = zip.file(p.image);
+            if (imgEntry) {
+              const base64 = await imgEntry.async("base64");
+              const ext = p.image.split(".").pop().toLowerCase();
+              const mime = ext === "png" ? "image/png" : "image/jpeg";
+              imageDataUrl = `data:${mime};base64,${base64}`;
+            }
+          }
+        }
+        products.push({ ...p, image: imageDataUrl });
+      }
+    } else {
+      // توافق مع الصيغة القديمة (ملف products.json مباشر بصور مضمّنة)
+      const text = await file.text();
+      const json = JSON.parse(text);
+      products = Array.isArray(json) ? json : (json.products || []);
+    }
     if (!confirm(`سيتم استبدال المنتجات الحالية بـ ${products.length} منتج من الملف. متابعة؟`)) return;
     await dbBulkReplace(products);
     showMsg("formMsg", "تم الاستيراد بنجاح ✅", "ok");
